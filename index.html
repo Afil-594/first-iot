@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>IoT Control Panel</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 500px;
+      margin: 40px auto;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 0.2rem;
+    }
+    .card {
+      border: 1px solid #ccc;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+    }
+    button {
+      padding: 6px 12px;
+      margin: 4px;
+      cursor: pointer;
+    }
+    #status {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>IoT Control Panel</h1>
+  <p>MQTT status: <span id="status">Connecting...</span></p>
+
+  <div class="card">
+    <h2>LED</h2>
+    <button id="btnOn">LED ON</button>
+    <button id="btnOff">LED OFF</button>
+  </div>
+
+  <div class="card">
+    <h2>LCD</h2>
+    <input id="lcdText" type="text" placeholder="Text for LCD" maxlength="32" />
+    <br />
+    <button id="btnSendLcd">Send to LCD</button>
+  </div>
+
+  <!-- MQTT.js dari CDN -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    // ====== KONFIGURASI ======
+    const brokerUrl = "wss://broker.emqx.io:8084/mqtt";
+
+    const options = {
+      clean: true,
+      connectTimeout: 4000,
+      clientId: "webclient-" + Math.random().toString(16).substr(2, 8),
+      username: "", // kosong untuk broker publik
+      password: "",
+    };
+
+    const topicLed = "iot/led";
+    const topicLcd = "iot/lcd";
+
+    const statusEl = document.getElementById("status");
+
+    // ====== CONNECT ======
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on("connect", () => {
+      console.log("Connected to MQTT broker");
+      statusEl.textContent = "Connected";
+    });
+
+    client.on("reconnect", () => {
+      statusEl.textContent = "Reconnecting...";
+    });
+
+    client.on("error", (err) => {
+      console.error("Connection error:", err);
+      statusEl.textContent = "Error (lihat console)";
+    });
+
+    client.on("close", () => {
+      statusEl.textContent = "Disconnected";
+    });
+
+    // ====== BUTTON HANDLERS ======
+    document.getElementById("btnOn").addEventListener("click", () => {
+      client.publish(topicLed, "ON");
+    });
+
+    document.getElementById("btnOff").addEventListener("click", () => {
+      client.publish(topicLed, "OFF");
+    });
+
+    document.getElementById("btnSendLcd").addEventListener("click", () => {
+      const text = document.getElementById("lcdText").value || "Hello from Web!";
+      client.publish(topicLcd, text);
+    });
+  </script>
+</body>
+</html>
