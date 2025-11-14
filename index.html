@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- judul tab browser -->
   <title>My first IoT</title>
-    <link
+
+  <!-- favicon emoji 📡 tanpa file tambahan -->
+  <link
     rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='80'%3E📡%3C/text%3E%3C/svg%3E"
-    />
+  />
+
   <style>
     :root {
       --bg: #020617;
@@ -272,7 +277,7 @@
       <div class="card">
         <header>
           <div class="title">
-            <h1>IoT Control Panel</h1>
+            <h1>My first IoT</h1>
             <span>ESP32 · MQTT · Cloudflare Pages</span>
           </div>
           <div class="status-pill" id="status-pill">
@@ -288,8 +293,8 @@
               <span class="badge">GPIO 4</span>
             </h2>
             <div class="btn-row">
-              <button id="btnOn" class="btn-primary">Hidupkan</button>
-              <button id="btnOff" class="btn-ghost">Matikan</button>
+              <button id="btnOn" class="btn-primary">Turn ON</button>
+              <button id="btnOff" class="btn-ghost">Turn OFF</button>
             </div>
           </article>
 
@@ -303,16 +308,26 @@
                 id="lcdText"
                 type="text"
                 maxlength="32"
-                placeholder="Ketik di sini (max 32 chars)"
+                placeholder="Type text for your LCD (max 32 chars)"
               />
               <div class="hint">Message is sent over MQTT to topic <code>iot/lcd</code>.</div>
-              <button id="btnSendLcd" class="btn-primary">Kirim ke LCD</button>
+              <button id="btnSendLcd" class="btn-primary">Send to LCD</button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h2>
+              Buzzer
+              <span class="badge">GPIO 16</span>
+            </h2>
+            <div class="btn-row">
+              <button id="btnBeep" class="btn-primary">Beep (2x)</button>
             </div>
           </article>
         </section>
 
         <footer>
-          <span>MQTT broker: wss://broker.emqx.io:8084/mqtt · topics: <code>iot/led</code>, <code>iot/lcd</code></span>
+          <span>MQTT broker: wss://broker.emqx.io:8084/mqtt · topics: <code>iot/led</code>, <code>iot/lcd</code>, <code>iot/buzzer</code></span>
         </footer>
       </div>
     </div>
@@ -333,6 +348,7 @@
 
     const topicLed = "iot/led";
     const topicLcd = "iot/lcd";
+    const topicBuzzer = "iot/buzzer";
 
     const statusPill = document.getElementById("status-pill");
     const statusText = document.getElementById("status-text");
@@ -381,6 +397,10 @@
       const input = document.getElementById("lcdText");
       const text = input.value.trim() || "Hello from the Web!";
       client.publish(topicLcd, text);
+    });
+
+    document.getElementById("btnBeep").addEventListener("click", () => {
+      client.publish(topicBuzzer, "BEEP");
     });
   </script>
 </body>
