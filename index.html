@@ -4,10 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- judul tab browser -->
   <title>My first IoT</title>
 
-  <!-- favicon emoji 📡 tanpa file tambahan -->
+  <!-- favicon emoji 📡 -->
   <link
     rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='80'%3E📡%3C/text%3E%3C/svg%3E"
@@ -73,7 +72,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 18px;
+      margin-bottom: 10px;
       gap: 8px;
     }
 
@@ -131,7 +130,7 @@
     .grid {
       display: grid;
       gap: 14px;
-      margin-top: 4px;
+      margin-top: 10px;
     }
 
     @media (min-width: 640px) {
@@ -259,6 +258,20 @@
       align-self: flex-end;
     }
 
+    .device-status {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .device-status.online {
+      color: var(--accent);
+    }
+
+    .device-status.offline {
+      color: var(--danger);
+    }
+
     footer {
       margin-top: 14px;
       text-align: center;
@@ -286,6 +299,11 @@
           </div>
         </header>
 
+        <!-- Status ESP32 -->
+        <div class="device-status" id="esp32-status">
+          ESP32: unknown
+        </div>
+
         <section class="grid">
           <article class="panel">
             <h2>
@@ -310,7 +328,9 @@
                 maxlength="32"
                 placeholder="Type text for your LCD (max 32 chars)"
               />
-              <div class="hint">Message is sent over MQTT to topic <code>iot/lcd</code>.</div>
+              <div class="hint">
+                Message is sent over MQTT to topic <code>iot/lcd</code>.
+              </div>
               <button id="btnSendLcd" class="btn-primary">Send to LCD</button>
             </div>
           </article>
@@ -327,7 +347,11 @@
         </section>
 
         <footer>
-          <span>MQTT broker: wss://broker.emqx.io:8084/mqtt · topics: <code>iot/led</code>, <code>iot/lcd</code>, <code>iot/buzzer</code></span>
+          <span>
+            MQTT broker: wss://broker.emqx.io:8084/mqtt · topics:
+            <code>iot/led</code>, <code>iot/lcd</code>, <code>iot/buzzer</code>,
+            <code>iot/esp32/status</code>
+          </span>
         </footer>
       </div>
     </div>
@@ -349,9 +373,11 @@
     const topicLed = "iot/led";
     const topicLcd = "iot/lcd";
     const topicBuzzer = "iot/buzzer";
+    const topicStatus = "iot/esp32/status";
 
     const statusPill = document.getElementById("status-pill");
     const statusText = document.getElementById("status-text");
+    const esp32StatusEl = document.getElementById("esp32-status");
 
     function setStatus(state, text) {
       statusPill.classList.remove("connected", "error");
@@ -363,11 +389,36 @@
       statusText.textContent = text;
     }
 
+    function setEsp32Status(state) {
+      if (!esp32StatusEl) return;
+      esp32StatusEl.classList.remove("online", "offline");
+
+      if (state === "online") {
+        esp32StatusEl.textContent = "ESP32: online & ready";
+        esp32StatusEl.classList.add("online");
+      } else if (state === "offline") {
+        esp32StatusEl.textContent = "ESP32: offline";
+        esp32StatusEl.classList.add("offline");
+      } else {
+        esp32StatusEl.textContent = "ESP32: unknown";
+      }
+    }
+
     const client = mqtt.connect(brokerUrl, options);
 
     client.on("connect", () => {
       console.log("Connected to MQTT broker");
       setStatus("connected", "Connected");
+
+      // subscribe ke topik status ESP32
+      client.subscribe(topicStatus, (err) => {
+        if (err) {
+          console.error("Failed to subscribe status topic", err);
+        } else {
+          console.log("Subscribed to", topicStatus);
+          // status last known (retained) akan segera diterima di client.on("message")
+        }
+      });
     });
 
     client.on("reconnect", () => {
@@ -383,8 +434,26 @@
     client.on("close", () => {
       console.log("Disconnected");
       setStatus("", "Disconnected");
+      setEsp32Status("unknown");
     });
 
+    // Handler semua pesan masuk
+    client.on("message", (topic, payload) => {
+      const msg = payload.toString();
+      console.log("Message arrived:", topic, msg);
+
+      if (topic === topicStatus) {
+        if (msg === "online") {
+          setEsp32Status("online");
+        } else if (msg === "offline") {
+          setEsp32Status("offline");
+        } else {
+          setEsp32Status("unknown");
+        }
+      }
+    });
+
+    // === Event tombol ===
     document.getElementById("btnOn").addEventListener("click", () => {
       client.publish(topicLed, "ON");
     });
